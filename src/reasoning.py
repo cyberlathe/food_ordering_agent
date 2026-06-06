@@ -176,7 +176,7 @@ def _summarize_result(tool_name: str, data: dict) -> str:
     if tool_name == "get_restaurants_for_keyword":
         restaurants = data.get("restaurants") or []
         if restaurants:
-            names = ", ".join(r["name"] for r in restaurants)
+            names = ", ".join(f"{r['name']} (id {r['id']})" for r in restaurants)
             return f"Found {len(restaurants)} restaurant(s): {names}"
         return "No restaurants found."
 

@@ -23,7 +23,7 @@ _MOCK_RESTAURANTS = [
         "rating": 4.5,
         "delivery_time_minutes": 35,
         "avg_price_for_two": 400,
-        "address": "Soho, London",
+        "address": "45 Mercer St, New York, NY 10013",
     },
     {
         "id": 1002,
@@ -32,7 +32,7 @@ _MOCK_RESTAURANTS = [
         "rating": 4.7,
         "delivery_time_minutes": 30,
         "avg_price_for_two": 450,
-        "address": "Shibuya, Tokyo",
+        "address": "23 Lexington Ave, New York, NY 10010",
     },
     {
         "id": 1003,
@@ -41,7 +41,7 @@ _MOCK_RESTAURANTS = [
         "rating": 4.6,
         "delivery_time_minutes": 28,
         "avg_price_for_two": 380,
-        "address": "Santa Fe, New Mexico",
+        "address": "88 E 10th St, New York, NY 10003",
     },
     {
         "id": 1004,
@@ -50,7 +50,7 @@ _MOCK_RESTAURANTS = [
         "rating": 4.4,
         "delivery_time_minutes": 33,
         "avg_price_for_two": 420,
-        "address": "Plaka, Athens",
+        "address": "17 W 32nd St, New York, NY 10001",
     },
     {
         "id": 1005,
@@ -59,7 +59,7 @@ _MOCK_RESTAURANTS = [
         "rating": 4.3,
         "delivery_time_minutes": 37,
         "avg_price_for_two": 390,
-        "address": "Lan Kwai Fong, Hong Kong",
+        "address": "12 Broadway, New York, NY 10004",
     },
 ]
 
@@ -101,7 +101,7 @@ _MOCK_MENU = {
     ],
 }
 
-_DEFAULT_DELIVERY_ADDRESS = "123 Main St, Springfield, IL 62704"
+_DEFAULT_DELIVERY_ADDRESS = "123 Broadway, New York, NY 10001"
 
 _MOCK_ADDRESSES = [
     {
@@ -197,7 +197,7 @@ def get_saved_addresses_for_user() -> dict:
     return {"addresses": _MOCK_ADDRESSES}
 
 
-@mcp.tool(description="Search restaurants by cuisine, dish, or restaurant name.")
+@mcp.tool(description="Search restaurants by cuisine, dish, or restaurant name. Each result includes an id field; use that id as res_id for menu-related tools.")
 def get_restaurants_for_keyword(keyword: str) -> dict:
     """Search restaurants by cuisine, dish, or restaurant name."""
     keyword = keyword.lower()
@@ -209,14 +209,14 @@ def get_restaurants_for_keyword(keyword: str) -> dict:
     return {"restaurants": results}
 
 
-@mcp.tool(description="List menu items for a restaurant, optionally filtered by category, keyword, or vegetarian preference.")
+@mcp.tool(description="List menu items for a restaurant. Use the res_id returned by get_restaurants_for_keyword as the restaurant identifier.")
 def get_menu_items_listing(res_id: int, category: str = "", keyword: str = "", veg_only: bool | None = None) -> dict:
     """List menu items for a restaurant, optionally filtered by category, keyword, or vegetarian preference."""
     menu = _filter_menu(_menu_for_restaurant(res_id), {"category": category, "keyword": keyword, "veg_only": veg_only})
     return {"menu_items": menu}
 
 
-@mcp.tool(description="Return the restaurant menu grouped by categories, with optional filtering.")
+@mcp.tool(description="Return the restaurant menu grouped by categories. Use the res_id returned by get_restaurants_for_keyword as the restaurant identifier.")
 def get_restaurant_menu_by_categories(res_id: int, category: str = "", keyword: str = "", veg_only: bool | None = None) -> dict:
     """Return the restaurant menu grouped by categories, with optional filtering."""
     menu = _filter_menu(_menu_for_restaurant(res_id), {"category": category, "keyword": keyword, "veg_only": veg_only})
