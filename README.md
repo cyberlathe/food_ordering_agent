@@ -115,9 +115,9 @@ running MCP server over `MCP_SERVER_URL`.
 ```
 Find me biryani near me
 I'm vegetarian, what do you recommend?
-Show me the menu at Hyderabadi Dum House
+Show me the menu at Olive & Spice
 What have I ordered before?
-Order butter chicken from the best place
+Order Pizza from the best place
 ```
 
 After each message, watch:
