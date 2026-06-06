@@ -137,7 +137,7 @@ def print_reasoning_block(steps: list[dict]):
 # ── Tool calls ────────────────────────────────────────────────────────────────
 
 def print_tool_call(tool: str, input_data: dict, result_summary: str, mock: bool):
-    tag = "[yellow][MOCK][/yellow]" if mock else "[green][LIVE][/green]"
+    tag = "[green][MCP][/green]"
     input_str = json.dumps(input_data, indent=2) if input_data else "{}"
     body = (
         f"{tag} [bold yellow]{tool}[/bold yellow]\n\n"

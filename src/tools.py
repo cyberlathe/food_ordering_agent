@@ -5,16 +5,11 @@ Handles all Food Ordering App MCP tool calls.
 """
 
 import itertools
-import json
 import random
-import sys
-from pathlib import Path
 from urllib import error as urllib_error
 from urllib import request as urllib_request
 
 import anyio
-from mcp import ClientSession
-from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.server.fastmcp import FastMCP
 
 # Mock data
@@ -184,56 +179,6 @@ def _filter_menu(items: list[dict], input_data: dict) -> list[dict]:
     return filtered
 
 
-def _mock_tool(name: str, input_data: dict) -> str:
-    """Simulate a food order tool call locally."""
-    if name == "get_saved_addresses_for_user":
-        return json.dumps({"addresses": _MOCK_ADDRESSES})
-
-    if name == "get_restaurants_for_keyword":
-        keyword = input_data.get("keyword", "").lower()
-        results = [
-            r
-            for r in _MOCK_RESTAURANTS
-            if keyword in r["cuisine"].lower() or keyword in r["name"].lower()
-        ] or _MOCK_RESTAURANTS[:3]
-        return json.dumps({"restaurants": results})
-
-    if name == "get_menu_items_listing":
-        res_id = input_data.get("res_id")
-        menu = _filter_menu(_menu_for_restaurant(res_id), input_data)
-        return json.dumps({"menu_items": menu})
-
-    if name == "get_restaurant_menu_by_categories":
-        res_id = input_data.get("res_id")
-        menu = _filter_menu(_menu_for_restaurant(res_id), input_data)
-        return json.dumps({"menu_items": menu})
-
-    if name == "get_order_history":
-        return json.dumps({"orders": _MOCK_ORDER_HISTORY})
-
-    if name == "create_cart":
-        return json.dumps(
-            {
-                "cart_id": "cart_" + str(random.randint(1000, 9999)),
-                "total_amount": random.randint(200, 600),
-                "status": "created",
-            }
-        )
-
-    if name == "checkout_cart":
-        delivery_address = str(input_data.get("address") or _DEFAULT_DELIVERY_ADDRESS)
-        return json.dumps(
-            {
-                "order_id": "ORD-" + str(random.randint(1000, 9999)),
-                "status": "placed",
-                "estimated_delivery": "35-45 minutes",
-                "delivery_address": delivery_address,
-            }
-        )
-
-    return json.dumps({"error": f"Unknown mock tool: {name}"})
-
-
 _MCP_PROTOCOL_VERSION = "2025-06-18"
 _MCP_FALLBACK_PROTOCOL_VERSION = "2025-03-26"
 _MCP_CLIENT_INFO = {"name": "food_ordering_agent", "version": "1.0.0"}
@@ -245,99 +190,63 @@ mcp = FastMCP(
 )
 
 
-@mcp.tool()
+@mcp.tool(description="Return the saved delivery addresses for the current user.")
 def get_saved_addresses_for_user() -> dict:
-    return json.loads(_mock_tool("get_saved_addresses_for_user", {}))
+    """Return the saved delivery addresses for the current user."""
+    return {"addresses": _MOCK_ADDRESSES}
 
 
-@mcp.tool()
+@mcp.tool(description="Search restaurants by cuisine, dish, or restaurant name.")
 def get_restaurants_for_keyword(keyword: str) -> dict:
-    return json.loads(_mock_tool("get_restaurants_for_keyword", {"keyword": keyword}))
+    """Search restaurants by cuisine, dish, or restaurant name."""
+    keyword = keyword.lower()
+    results = [
+        r
+        for r in _MOCK_RESTAURANTS
+        if keyword in r["cuisine"].lower() or keyword in r["name"].lower()
+    ] or _MOCK_RESTAURANTS[:3]
+    return {"restaurants": results}
 
 
-@mcp.tool()
+@mcp.tool(description="List menu items for a restaurant, optionally filtered by category, keyword, or vegetarian preference.")
 def get_menu_items_listing(res_id: int, category: str = "", keyword: str = "", veg_only: bool | None = None) -> dict:
-    return json.loads(_mock_tool("get_menu_items_listing", {"res_id": res_id, "category": category, "keyword": keyword, "veg_only": veg_only}))
+    """List menu items for a restaurant, optionally filtered by category, keyword, or vegetarian preference."""
+    menu = _filter_menu(_menu_for_restaurant(res_id), {"category": category, "keyword": keyword, "veg_only": veg_only})
+    return {"menu_items": menu}
 
 
-@mcp.tool()
+@mcp.tool(description="Return the restaurant menu grouped by categories, with optional filtering.")
 def get_restaurant_menu_by_categories(res_id: int, category: str = "", keyword: str = "", veg_only: bool | None = None) -> dict:
-    return json.loads(_mock_tool("get_restaurant_menu_by_categories", {"res_id": res_id, "category": category, "keyword": keyword, "veg_only": veg_only}))
+    """Return the restaurant menu grouped by categories, with optional filtering."""
+    menu = _filter_menu(_menu_for_restaurant(res_id), {"category": category, "keyword": keyword, "veg_only": veg_only})
+    return {"menu_items": menu}
 
 
-@mcp.tool()
+@mcp.tool(description="Return the user's past order history.")
 def get_order_history() -> dict:
-    return json.loads(_mock_tool("get_order_history", {}))
+    """Return the user's past order history."""
+    return {"orders": _MOCK_ORDER_HISTORY}
 
 
-@mcp.tool()
+@mcp.tool(description="Create a new cart for the current order session.")
 def create_cart() -> dict:
-    return json.loads(_mock_tool("create_cart", {}))
+    """Create a new cart for the current order session."""
+    return {
+        "cart_id": "cart_" + str(random.randint(1000, 9999)),
+        "total_amount": random.randint(200, 600),
+        "status": "created",
+    }
 
 
-@mcp.tool()
+@mcp.tool(description="Place the current order and optionally provide a delivery address.")
 def checkout_cart(address: str | None = None) -> dict:
-    return json.loads(_mock_tool("checkout_cart", {"address": address}))
-
-
-def _mcp_result_to_json(result) -> str:
-    if hasattr(result, "model_dump"):
-        result = result.model_dump()
-
-    if isinstance(result, dict):
-        if result.get("structuredContent") is not None:
-            return json.dumps(result["structuredContent"])
-
-        content = result.get("content")
-    else:
-        content = getattr(result, "content", None)
-
-    if not isinstance(content, list):
-        if isinstance(result, dict):
-            return json.dumps(result)
-        return json.dumps({"result": result})
-
-    values = []
-    text_chunks = []
-    for block in content:
-        if isinstance(block, dict):
-            if "data" in block:
-                values.append(block["data"])
-                continue
-
-            if "text" in block:
-                text = str(block["text"])
-                try:
-                    values.append(json.loads(text))
-                except json.JSONDecodeError:
-                    text_chunks.append(text)
-                continue
-
-        text_chunks.append(str(block))
-
-    if len(values) == 1 and not text_chunks:
-        return json.dumps(values[0])
-
-    if values or text_chunks:
-        return json.dumps({
-            "content": values,
-            "text": "\n".join(text_chunks).strip(),
-        })
-
-    return json.dumps(result)
-
-async def _call_tool_via_mcp(name: str, input_data: dict) -> str:
-    server_params = StdioServerParameters(
-        command=sys.executable,
-        args=[str(Path(__file__).resolve())],
-        cwd=str(Path(__file__).resolve().parent),
-    )
-
-    async with stdio_client(server_params) as (read_stream, write_stream):
-        async with ClientSession(read_stream, write_stream) as session:
-            await session.initialize()
-            result = await session.call_tool(name, input_data)
-            return _mcp_result_to_json(result)
+    """Place the current order and optionally provide a delivery address."""
+    return {
+        "order_id": "ORD-" + str(random.randint(1000, 9999)),
+        "status": "placed",
+        "estimated_delivery": "35-45 minutes",
+        "delivery_address": str(address or _DEFAULT_DELIVERY_ADDRESS),
+    }
 
 
 def list_available_tools() -> list[dict]:
@@ -351,21 +260,13 @@ def list_available_tools() -> list[dict]:
         return [
             {
                 "name": getattr(item, "name", ""),
-                "description": getattr(item, "description", ""),
+                "description": getattr(item, "description", "") or getattr(item, "title", ""),
+                "inputSchema": getattr(item, "inputSchema", None),
             }
             for item in tools
         ]
     except Exception:
         return []
-
-
-def execute_tool(
-    name: str,
-    input_data: dict,
-) -> tuple[str, bool]:
-    """Execute a food order agent tool via the local MCP server."""
-    result = anyio.run(_call_tool_via_mcp, name, input_data)
-    return result, False
 
 
 if __name__ == "__main__":

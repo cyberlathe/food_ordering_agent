@@ -52,7 +52,6 @@ python agent.py
 
 | Flag | What it does |
 |------|-------------|
-| `--mock` | Start in mock mode |
 | `--raw` | Also print the raw JSON from the LLM |
 | `--debug` | Print full tracebacks on errors |
 
@@ -106,7 +105,7 @@ After each message, watch:
 ## Key design patterns
 
 ### 1. Tool abstraction
-The agent calls `execute_tool(name, input)` — it never knows if the result comes from the MCP API or mock api etc., This is the **adapter pattern**.
+The agent calls `execute_tool(name, input)` — it never knows if the result comes from the MCP API, This is the **adapter pattern**.
 
 ### 2. Structured output
 The LLM always returns JSON (not plain text). This makes the output
@@ -117,6 +116,6 @@ Before every API call, the current memory is formatted as a string and
 injected into the system prompt. The LLM "knows" about the user without
 any special memory API.
 
-### 4. Graceful degradation
-If the MCP server fails is unavailable, the agent automatically falls back
-to mock data. The user experience is uninterrupted.
+### 4. Reliable tool execution
+The agent uses the local MCP server as its real tool source, so tool calls
+run consistently through the same MCP interface.

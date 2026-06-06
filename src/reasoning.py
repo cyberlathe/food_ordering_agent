@@ -13,8 +13,8 @@ from typing import Any
 
 import display as display
 from config import SHOW_RAW_JSON
+from mcp_client import execute_tool
 from memory import Memory
-from tools import execute_tool
 
 MAX_TOOL_ROUNDS = 3
 
@@ -109,7 +109,7 @@ def _execute_tool_calls(
         signature = _tool_signature(tool_name, tool_input)
         executed_calls.add(signature)
 
-        result_json, was_mock = execute_tool(
+        result_json = execute_tool(
             name=tool_name,
             input_data=tool_input,
         )
@@ -123,8 +123,7 @@ def _execute_tool_calls(
         display.print_tool_call(
             tool=tool_name,
             input_data=tool_input,
-            result_summary=result_summary,
-            mock=was_mock,
+            result_summary=result_summary
         )
 
         round_results.append({
