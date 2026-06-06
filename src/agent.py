@@ -49,7 +49,6 @@ def main():
         sys.exit(1)
 
     turn = 0
-    use_mock = "--mock" in sys.argv
 
     while True:
         try:
@@ -103,7 +102,6 @@ def main():
                 user_message=user_input,
                 llm_client=llm,
                 memory=memory,
-                use_mock=use_mock,
             )
         except Exception as e:
             display.print_error(f"Turn failed: {e}")

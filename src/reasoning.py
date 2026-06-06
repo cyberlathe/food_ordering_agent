@@ -23,7 +23,6 @@ def run_turn(
     user_message: str,
     llm_client,
     memory: Memory,
-    use_mock: bool,
 ) -> str:
     """Run one full reasoning loop turn and return the final reply."""
     memory_string = memory.to_prompt_string()
@@ -52,7 +51,7 @@ def run_turn(
                 continue
             break
 
-        round_results = _execute_tool_calls(tool_calls, use_mock, executed_calls)
+        round_results = _execute_tool_calls(tool_calls, executed_calls)
         parsed, _raw = llm_client.observe_tools(round_results, memory.to_prompt_string())
 
         if SHOW_RAW_JSON:
@@ -101,7 +100,6 @@ def _dedupe_tool_calls(
 
 def _execute_tool_calls(
     tool_calls: list[dict],
-    use_mock: bool,
     executed_calls: set[str],
 ) -> list[dict]:
     round_results = []
@@ -114,7 +112,6 @@ def _execute_tool_calls(
         result_json, was_mock = execute_tool(
             name=tool_name,
             input_data=tool_input,
-            use_mock=use_mock,
         )
 
         try:

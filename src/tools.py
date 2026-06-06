@@ -362,17 +362,10 @@ def list_available_tools() -> list[dict]:
 def execute_tool(
     name: str,
     input_data: dict,
-    use_mock: bool,
 ) -> tuple[str, bool]:
-    """Execute a food order agent tool via MCP, or fall back to mock data."""
-    if use_mock:
-        return _mock_tool(name, input_data), True
-
-    try:
-        result = anyio.run(_call_tool_via_mcp, name, input_data)
-        return result, False
-    except Exception:
-        return _mock_tool(name, input_data), True
+    """Execute a food order agent tool via the local MCP server."""
+    result = anyio.run(_call_tool_via_mcp, name, input_data)
+    return result, False
 
 
 if __name__ == "__main__":

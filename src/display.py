@@ -68,9 +68,8 @@ def print_turn_separator(turn: int):
     console.print(Rule(f"[dim]Turn {turn}[/dim]", style="dim"))
 
 
-def print_mode_banner(use_mock: bool):
-    mode = "[yellow]MOCK MODE[/yellow] — using fake data"
-    console.print(f"\n  {mode}\n")
+def print_mode_banner():
+    console.print("\n  [cyan]MCP mode[/cyan] — using the local MCP server\n")
 
 
 # ── Memory ────────────────────────────────────────────────────────────────────
