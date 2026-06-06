@@ -38,3 +38,6 @@ tool_outputs/
 
 # Memory files (if you want to ignore them, otherwise they can be useful for debugging)
 memory.json
+
+# Ignore the following files if you want to keep your API keys and config out of version control
+config.py
