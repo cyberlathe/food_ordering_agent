@@ -136,7 +136,7 @@ def print_reasoning_block(steps: list[dict]):
 
 # ── Tool calls ────────────────────────────────────────────────────────────────
 
-def print_tool_call(tool: str, input_data: dict, result_summary: str, mock: bool):
+def print_tool_call(tool: str, input_data: dict, result_summary: str):
     tag = "[green][MCP][/green]"
     input_str = json.dumps(input_data, indent=2) if input_data else "{}"
     body = (

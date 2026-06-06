@@ -11,7 +11,7 @@ from typing import Any
 from openai import OpenAI
 
 from config import MAX_TOKENS, MODEL, OPENAI_API_KEY
-from tools import list_available_tools
+from mcp_server import list_available_tools
 
 
 SYSTEM_TEMPLATE = """You are an educational AI food agent connected to the Food Ordering App MCP platform.

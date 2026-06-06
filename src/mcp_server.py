@@ -5,6 +5,7 @@ Handles all Food Ordering App MCP tool calls.
 """
 
 import itertools
+import os
 import random
 from urllib import error as urllib_error
 from urllib import request as urllib_request
@@ -270,4 +271,6 @@ def list_available_tools() -> list[dict]:
 
 
 if __name__ == "__main__":
-    mcp.run(transport="stdio")
+    transport = os.getenv("MCP_TRANSPORT", "streamable-http")
+    mount_path = os.getenv("MCP_MOUNT_PATH", "/mcp")
+    mcp.run(transport=transport, mount_path=mount_path)

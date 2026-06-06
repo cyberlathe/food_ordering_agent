@@ -1,16 +1,16 @@
 """
 mcp_client.py
 -------------
-Small client adapter for running the local MCP tool server over stdio.
+Client adapter for calling a remote MCP server over its URL.
 """
 
 import json
-import sys
-from pathlib import Path
 
 import anyio
 from mcp import ClientSession
-from mcp.client.stdio import StdioServerParameters, stdio_client
+from mcp.client.streamable_http import streamablehttp_client
+
+from config import MCP_SERVER_URL
 
 
 def _mcp_result_to_json(result) -> str:
@@ -62,14 +62,8 @@ def _mcp_result_to_json(result) -> str:
 
 
 async def _call_tool_via_mcp(name: str, input_data: dict) -> str:
-    """Call a tool on the local MCP server process over stdio."""
-    server_params = StdioServerParameters(
-        command=sys.executable,
-        args=[str(Path(__file__).resolve().with_name("tools.py"))],
-        cwd=str(Path(__file__).resolve().parent),
-    )
-
-    async with stdio_client(server_params) as (read_stream, write_stream):
+    """Call a tool on the MCP server reachable at MCP_SERVER_URL."""
+    async with streamablehttp_client(MCP_SERVER_URL) as (read_stream, write_stream, _session):
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
             result = await session.call_tool(name, input_data)

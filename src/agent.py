@@ -50,6 +50,7 @@ def main():
 
     turn = 0
 
+    display.print_agent_reply("What would you like to order today? 🍔🍕🍣\n")
     while True:
         try:
             user_input = display.print_user_prompt()
