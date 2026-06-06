@@ -40,4 +40,4 @@ tool_outputs/
 memory.json
 
 # Ignore the following files if you want to keep your API keys and config out of version control
-config.py
+src/config.py
