@@ -12,8 +12,11 @@ students can watch the agent *think* in real time.
 |-----------|------|---------|
 | **Memory** | `memory.py` | How agents remember facts across turns |
 | **Reasoning Loop** | `reasoning.py` | Think → Plan → Act → Observe → Answer |
-| **Tools** | `tools.py` | How agents interact with external APIs |
+| **MCP Server** | `mcp_server.py` | Exposes food-ordering tools over MCP |
+| **MCP Client** | `mcp_client.py` | Calls the remote MCP server over HTTP |
+| **Reasoning Loop** | `reasoning.py` | Think → Plan → Act → Observe → Answer |
 | **LLM Client** | `llm.py` | Conversation history + system prompts |
+| **Memory** | `memory.py` | How agents remember facts across turns |
 | **Display** | `display.py` | Color-coded output for each component |
 | **Entry point** | `agent.py` | The REPL loop that keeps the agent alive |
 
@@ -23,7 +26,7 @@ students can watch the agent *think* in real time.
 
 ### 1. Install dependencies
 ```bash
-pip install openai rich
+pip install openai rich mcp
 ```
 
 ### 2. Set your API key
@@ -31,9 +34,28 @@ pip install openai rich
 export OPENAI_API_KEY=sk-...
 ```
 
-### 3. Run
+### 3. Start the MCP server
+The client expects the MCP server to be running first.
+
 ```bash
+cd src
+python mcp_server.py
+```
+
+This starts the MCP HTTP endpoint on `http://127.0.0.1:8000/mcp` by default.
+
+### 4. Run the agent
+In a second terminal:
+
+```bash
+cd src
 python agent.py
+```
+
+If your server is running somewhere else, set:
+
+```bash
+export MCP_SERVER_URL=http://your-host:port/mcp
 ```
 
 ---
@@ -79,8 +101,11 @@ User message
            │
     ┌──────┴──────┐
     ▼             ▼
- Memory        Tools
-(persists)     (MCP)
+ Memory        MCP Server
+(persists)     (tools + HTTP endpoint)
+
+The agent then calls the MCP client in `mcp_client.py`, which talks to the
+running MCP server over `MCP_SERVER_URL`.
 ```
 
 ---
@@ -105,7 +130,8 @@ After each message, watch:
 ## Key design patterns
 
 ### 1. Tool abstraction
-The agent calls `execute_tool(name, input)` — it never knows if the result comes from the MCP API, This is the **adapter pattern**.
+The agent calls `execute_tool(name, input)` through `mcp_client.py`, which hides the
+HTTP MCP transport details behind a simple adapter. This is the **adapter pattern**.
 
 ### 2. Structured output
 The LLM always returns JSON (not plain text). This makes the output
@@ -117,5 +143,5 @@ injected into the system prompt. The LLM "knows" about the user without
 any special memory API.
 
 ### 4. Reliable tool execution
-The agent uses the local MCP server as its real tool source, so tool calls
-run consistently through the same MCP interface.
+The agent uses the MCP server as its real tool source, so tool calls run through
+one consistent MCP interface. The server must be started before the agent begins.
