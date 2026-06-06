@@ -1,21 +1,21 @@
 """
 tools.py
 --------
-Handles all Zomato tool calls.
-
-This file has TWO modes:
-  REAL MODE -> sends the tool call to the real Zomato MCP server over HTTP.
-  MOCK MODE -> returns realistic fake data locally.
-
-The agent itself never knows which mode is active. It just calls
-execute_tool(name, input_data) and gets a result back.
+Handles all Food Ordering App MCP tool calls.
 """
 
 import itertools
 import json
 import random
+import sys
+from pathlib import Path
 from urllib import error as urllib_error
 from urllib import request as urllib_request
+
+import anyio
+from mcp import ClientSession
+from mcp.client.stdio import StdioServerParameters, stdio_client
+from mcp.server.fastmcp import FastMCP
 
 # Mock data
 
@@ -235,17 +235,63 @@ _MCP_FALLBACK_PROTOCOL_VERSION = "2025-03-26"
 _MCP_CLIENT_INFO = {"name": "food_ordering_agent", "version": "1.0.0"}
 _REQUEST_IDS = itertools.count(1)
 
+mcp = FastMCP(
+    name="food_ordering_tools",
+    instructions="Provide food ordering tools for restaurant search, menu browsing, cart, order history, place order.",
+)
+
+
+@mcp.tool()
+def get_saved_addresses_for_user() -> dict:
+    return json.loads(_mock_tool("get_saved_addresses_for_user", {}))
+
+
+@mcp.tool()
+def get_restaurants_for_keyword(keyword: str) -> dict:
+    return json.loads(_mock_tool("get_restaurants_for_keyword", {"keyword": keyword}))
+
+
+@mcp.tool()
+def get_menu_items_listing(res_id: int, category: str = "", keyword: str = "", veg_only: bool | None = None) -> dict:
+    return json.loads(_mock_tool("get_menu_items_listing", {"res_id": res_id, "category": category, "keyword": keyword, "veg_only": veg_only}))
+
+
+@mcp.tool()
+def get_restaurant_menu_by_categories(res_id: int, category: str = "", keyword: str = "", veg_only: bool | None = None) -> dict:
+    return json.loads(_mock_tool("get_restaurant_menu_by_categories", {"res_id": res_id, "category": category, "keyword": keyword, "veg_only": veg_only}))
+
+
+@mcp.tool()
+def get_order_history() -> dict:
+    return json.loads(_mock_tool("get_order_history", {}))
+
+
+@mcp.tool()
+def create_cart() -> dict:
+    return json.loads(_mock_tool("create_cart", {}))
+
+
+@mcp.tool()
+def checkout_cart() -> dict:
+    return json.loads(_mock_tool("checkout_cart", {}))
+
 
 def _mcp_result_to_json(result) -> str:
-    if not isinstance(result, dict):
-        return json.dumps({"result": result})
+    if hasattr(result, "model_dump"):
+        result = result.model_dump()
 
-    if result.get("structuredContent") is not None:
-        return json.dumps(result["structuredContent"])
+    if isinstance(result, dict):
+        if result.get("structuredContent") is not None:
+            return json.dumps(result["structuredContent"])
 
-    content = result.get("content")
+        content = result.get("content")
+    else:
+        content = getattr(result, "content", None)
+
     if not isinstance(content, list):
-        return json.dumps(result)
+        if isinstance(result, dict):
+            return json.dumps(result)
+        return json.dumps({"result": result})
 
     values = []
     text_chunks = []
@@ -276,10 +322,35 @@ def _mcp_result_to_json(result) -> str:
 
     return json.dumps(result)
 
+async def _call_tool_via_mcp(name: str, input_data: dict) -> str:
+    server_params = StdioServerParameters(
+        command=sys.executable,
+        args=[str(Path(__file__).resolve())],
+        cwd=str(Path(__file__).resolve().parent),
+    )
+
+    async with stdio_client(server_params) as (read_stream, write_stream):
+        async with ClientSession(read_stream, write_stream) as session:
+            await session.initialize()
+            result = await session.call_tool(name, input_data)
+            return _mcp_result_to_json(result)
+
+
 def execute_tool(
     name: str,
     input_data: dict,
     use_mock: bool,
 ) -> tuple[str, bool]:
-    """Execute a food order agent tool and fall back to mock data on failure."""
-    return _mock_tool(name, input_data), True
+    """Execute a food order agent tool via MCP, or fall back to mock data."""
+    if use_mock:
+        return _mock_tool(name, input_data), True
+
+    try:
+        result = anyio.run(_call_tool_via_mcp, name, input_data)
+        return result, False
+    except Exception:
+        return _mock_tool(name, input_data), True
+
+
+if __name__ == "__main__":
+    mcp.run(transport="stdio")

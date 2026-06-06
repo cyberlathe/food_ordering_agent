@@ -11,7 +11,7 @@ Runs the agent turn loop:
 import json
 from typing import Any
 
-import display
+import display as display
 from config import SHOW_RAW_JSON
 from memory import Memory
 from tools import execute_tool

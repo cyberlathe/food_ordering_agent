@@ -41,7 +41,7 @@ def print_welcome():
     console.print()
     console.print(Panel.fit(
         "[bold cyan]🤖  AI Agent — Educational Demo[/bold cyan]\n"
-        "[dim]Zomato MCP · Memory · Reasoning Loop · Tools[/dim]\n\n"
+        "[dim]MCP · Memory · Reasoning Loop · Tools[/dim]\n\n"
         "[dim]Commands:  [bold]quit[/bold] · [bold]memory[/bold] · [bold]clear[/bold] · [bold]help[/bold][/dim]",
         border_style="cyan",
         padding=(1, 4),
@@ -55,7 +55,6 @@ def print_help():
     table.add_row("[bold cyan]memory[/bold cyan]",  "Show everything stored in memory")
     table.add_row("[bold cyan]clear[/bold cyan]",   "Clear conversation history (keeps memory)")
     table.add_row("[bold cyan]reset[/bold cyan]",   "Clear both history AND memory")
-    table.add_row("[bold cyan]mock[/bold cyan]",    "Toggle mock/real Zomato mode")
     console.print(Panel(table, title="[bold]Commands[/bold]", border_style="dim"))
 
 
@@ -70,8 +69,7 @@ def print_turn_separator(turn: int):
 
 
 def print_mode_banner(use_mock: bool):
-    mode = "[yellow]MOCK MODE[/yellow] — using fake Zomato data" if use_mock \
-        else "[green]LIVE MODE[/green] — calling real Zomato MCP"
+    mode = "[yellow]MOCK MODE[/yellow] — using fake data"
     console.print(f"\n  {mode}\n")
 
 
@@ -98,6 +96,25 @@ def print_memory_panel(facts: dict[str, Any]):
 def print_memory_update(key: str, value: Any):
     console.print(f"  [bold purple]🧠  Memory[/bold purple]  [purple]{key}[/purple] ← [white]{value}[/white]")
 
+# ── History ──────────────────────────────────────────────────────────
+
+def print_history_panel(history: list[dict]):
+    if not history:
+        console.print(Panel("[dim]No conversation history yet.[/dim]",
+                            title="[bold dim]Conversation History[/bold dim]",
+                            border_style="dim"))
+        return
+
+    panels = []
+    for turn in history:
+        role = turn.get("role", "unknown").upper()
+        content = turn.get("content", "")
+        panels.append(Panel(content, title=f"[bold]{role}[/bold]", border_style="dim"))
+
+    console.print(Panel(Columns(panels),
+                        title="[bold dim]Conversation History[/bold dim]",
+                        border_style="dim",
+                        padding=(1, 2)))
 
 # ── Reasoning phases ──────────────────────────────────────────────────────────
 

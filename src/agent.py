@@ -24,13 +24,13 @@ import os
 # ── Allow running from project root ──────────────────────────────────────────
 sys.path.insert(0, os.path.dirname(__file__))
 
-import config
+import config as config
 
 # ── Parse CLI flags before imports that read config ───────────────────────────
 if "--raw" in sys.argv:
     config.SHOW_RAW_JSON = True
 
-import display
+import display as display
 from memory import Memory
 from llm import LLMClient
 from reasoning import run_turn
@@ -38,7 +38,6 @@ from reasoning import run_turn
 
 def main():
     display.print_welcome()
-    display.print_mode_banner(config.USE_MOCK)
 
     # Initialise components
     memory = Memory()
@@ -50,6 +49,7 @@ def main():
         sys.exit(1)
 
     turn = 0
+    use_mock = "--mock" in sys.argv
 
     while True:
         try:
@@ -83,6 +83,10 @@ def main():
             turn = 0
             continue
 
+        if cmd == "history":
+            display.print_history_panel(llm.history)
+            continue
+
         if cmd == "reset":
             llm.clear_history()
             memory.clear()
@@ -99,6 +103,7 @@ def main():
                 user_message=user_input,
                 llm_client=llm,
                 memory=memory,
+                use_mock=use_mock,
             )
         except Exception as e:
             display.print_error(f"Turn failed: {e}")

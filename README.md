@@ -1,6 +1,6 @@
 # 🤖 AI Agent — Educational Demo
 
-A command-line agent that connects to **Zomato** (via MCP) to find restaurants,
+A command-line agent that connects to **Food Ordering App** (via MCP) to find restaurants,
 browse menus, and place orders — while exposing every internal component so
 students can watch the agent *think* in real time.
 
@@ -31,12 +31,7 @@ pip install openai rich
 export OPENAI_API_KEY=sk-...
 ```
 
-### 3. Run (mock mode — no Zomato credentials needed)
-```bash
-python agent.py --mock
-```
-
-### 4. Run (real Zomato MCP)
+### 3. Run
 ```bash
 python agent.py
 ```
@@ -51,7 +46,6 @@ python agent.py
 | `memory` | Show everything the agent has stored about you |
 | `clear` | Clear conversation history (memory stays) |
 | `reset` | Clear both history AND memory |
-| `mock` | Toggle between real / mock Zomato mode |
 | `help` | Show all commands |
 
 ## Flags
@@ -77,7 +71,7 @@ User message
 │    ↓                             │
 │  PLAN    ← decides which tools   │
 │    ↓                             │
-│  ACT     ← calls Zomato tools    │
+│  ACT     ← calls MCP tools    │
 │    ↓                             │
 │  OBSERVE ← reads tool results    │
 │    ↓                             │
@@ -87,8 +81,7 @@ User message
     ┌──────┴──────┐
     ▼             ▼
  Memory        Tools
-(persists)   (Zomato MCP
-              or mock)
+(persists)     (MCP)
 ```
 
 ---
@@ -106,15 +99,14 @@ Order butter chicken from the best place
 After each message, watch:
 - 🧠 **Memory panel** — new facts extracted from your message
 - 🔵🟡🟠🟢✨ **Reasoning phases** — the agent's internal monologue
-- 🔧 **Tool calls** — every Zomato API call with exact inputs + results
+- 🔧 **Tool calls** — every MCP API call with exact inputs + results
 
 ---
 
 ## Key design patterns
 
 ### 1. Tool abstraction
-The agent calls `execute_tool(name, input)` — it never knows if the result
-comes from the real Zomato API or the mock. This is the **adapter pattern**.
+The agent calls `execute_tool(name, input)` — it never knows if the result comes from the MCP API or mock api etc., This is the **adapter pattern**.
 
 ### 2. Structured output
 The LLM always returns JSON (not plain text). This makes the output
@@ -126,5 +118,5 @@ injected into the system prompt. The LLM "knows" about the user without
 any special memory API.
 
 ### 4. Graceful degradation
-If the real Zomato MCP is unavailable, the agent automatically falls back
+If the MCP server fails is unavailable, the agent automatically falls back
 to mock data. The user experience is uninterrupted.
