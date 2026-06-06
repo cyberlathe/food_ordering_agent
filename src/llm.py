@@ -11,6 +11,7 @@ from typing import Any
 from openai import OpenAI
 
 from config import MAX_TOKENS, MODEL, OPENAI_API_KEY
+from tools import list_available_tools
 
 
 SYSTEM_TEMPLATE = """You are an educational AI food agent connected to the Food Ordering App MCP platform.
@@ -19,14 +20,7 @@ You help users find restaurants, browse menus, and place food orders.
 Your current memory (facts you have learned about this user):
 {memory}
 
-Available food ordering mcp tools:
-- get_saved_addresses_for_user: get user's saved delivery addresses
-- get_restaurants_for_keyword: search restaurants by dish/cuisine/name
-- get_menu_items_listing: list all menu items for a restaurant
-- get_restaurant_menu_by_categories: get menu filtered by category
-- get_order_history: show past orders
-- create_cart: create a cart with selected items
-- checkout_cart: place the order
+{tools}
 
 Return exactly one JSON object with these fields:
 - reasoning: five objects with phase and text for think, plan, act, observe, answer
@@ -97,6 +91,19 @@ AGENT_RESPONSE_SCHEMA: dict[str, Any] = {
 }
 
 
+def _tool_prompt_block() -> str:
+    tools = list_available_tools()
+    if not tools:
+        return "Available food ordering MCP tools: (tool discovery failed, so use the server-provided tool names when requested)."
+
+    lines = ["Available food ordering MCP tools:"]
+    for tool in tools:
+        name = str(tool.get("name", "")).strip()
+        description = str(tool.get("description", "")).strip() or "Tool provided by the MCP server."
+        lines.append(f"- {name}: {description}")
+    return "\n".join(lines)
+
+
 class LLMClient:
     def __init__(self):
         if not OPENAI_API_KEY:
@@ -135,7 +142,13 @@ class LLMClient:
 
     def _complete(self, memory_string: str) -> tuple[dict[str, Any], str]:
         messages = [
-            {"role": "system", "content": SYSTEM_TEMPLATE.format(memory=memory_string)},
+            {
+                "role": "system",
+                "content": SYSTEM_TEMPLATE.format(
+                    memory=memory_string,
+                    tools=_tool_prompt_block(),
+                ),
+            },
             *self.history,
         ]
 

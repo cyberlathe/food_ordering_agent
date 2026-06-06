@@ -105,11 +105,13 @@ _MOCK_MENU = {
     ],
 }
 
+_DEFAULT_DELIVERY_ADDRESS = "123 Main St, Springfield, IL 62704"
+
 _MOCK_ADDRESSES = [
     {
         "id": "addr_001",
         "label": "Home",
-        "address": "12 MG Road, Tilakwadi, Belagavi, KA 590006",
+        "address": _DEFAULT_DELIVERY_ADDRESS,
     }
 ]
 
@@ -219,11 +221,13 @@ def _mock_tool(name: str, input_data: dict) -> str:
         )
 
     if name == "checkout_cart":
+        delivery_address = str(input_data.get("address") or _DEFAULT_DELIVERY_ADDRESS)
         return json.dumps(
             {
                 "order_id": "ORD-" + str(random.randint(1000, 9999)),
                 "status": "placed",
                 "estimated_delivery": "35-45 minutes",
+                "delivery_address": delivery_address,
             }
         )
 
@@ -272,8 +276,8 @@ def create_cart() -> dict:
 
 
 @mcp.tool()
-def checkout_cart() -> dict:
-    return json.loads(_mock_tool("checkout_cart", {}))
+def checkout_cart(address: str | None = None) -> dict:
+    return json.loads(_mock_tool("checkout_cart", {"address": address}))
 
 
 def _mcp_result_to_json(result) -> str:
@@ -334,6 +338,25 @@ async def _call_tool_via_mcp(name: str, input_data: dict) -> str:
             await session.initialize()
             result = await session.call_tool(name, input_data)
             return _mcp_result_to_json(result)
+
+
+def list_available_tools() -> list[dict]:
+    """Return MCP tool metadata from the server definition."""
+
+    async def _list_tools() -> list:
+        return await mcp.list_tools()
+
+    try:
+        tools = anyio.run(_list_tools)
+        return [
+            {
+                "name": getattr(item, "name", ""),
+                "description": getattr(item, "description", ""),
+            }
+            for item in tools
+        ]
+    except Exception:
+        return []
 
 
 def execute_tool(
