@@ -1,85 +1,141 @@
-# 🤖 AI Agent — Educational Demo
+# 🤖 Food Ordering Agent
 
-A command-line agent that connects to **Food Ordering App** (via MCP) to find restaurants,
-browse menus, and place orders — while exposing every internal component so
-students can watch the agent *think* in real time.
+A command-line agent that combines an LLM, persistent memory, and an MCP-backed food-ordering tool server. It is designed for learning how agents reason, call tools, and remember user preferences across turns.
 
 ---
 
-## What you'll learn
+## What is included now
 
-| Component | File | Concept |
-|-----------|------|---------|
-| **Memory** | `memory.py` | How agents remember facts across turns |
-| **Reasoning Loop** | `reasoning.py` | Think → Plan → Act → Observe → Answer |
-| **MCP Server** | `mcp_server.py` | Exposes food-ordering tools over MCP |
-| **MCP Client** | `mcp_client.py` | Calls the remote MCP server over HTTP |
-| **Reasoning Loop** | `reasoning.py` | Think → Plan → Act → Observe → Answer |
-| **LLM Client** | `llm.py` | Conversation history + system prompts |
-| **Memory** | `memory.py` | How agents remember facts across turns |
-| **Display** | `display.py` | Color-coded output for each component |
-| **Entry point** | `agent.py` | The REPL loop that keeps the agent alive |
+| Area | File | Notes |
+|------|------|-------|
+| REPL entry point | `src/agent.py` | Interactive chat loop with built-in commands |
+| LLM wrapper | `src/llm.py` | Supports OpenAI and Anthropic providers |
+| Reasoning loop | `src/reasoning.py` | Think → Plan → Act → Observe → Answer |
+| MCP client | `src/mcp_client.py` | Calls the MCP server over HTTP |
+| MCP server | `src/mcp_server.py` | Exposes mock food-ordering tools |
+| Memory store | `src/memory.py` | Persists user facts to `src/memory.json` |
+| Display layer | `src/display.py` | Color-coded reasoning, memory, and tool traces |
 
 ---
 
 ## Quick start
 
 ### 1. Install dependencies
+
 ```bash
-pip install openai rich mcp
+pip install -r requirements.txt
 ```
 
-### 2. Set your API key
+### 2. Set your LLM credentials
+
+OpenAI:
+
 ```bash
 export OPENAI_API_KEY=sk-...
 ```
 
+Anthropic:
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Optional overrides:
+
+```bash
+export LLM_PROVIDER=openai      # or anthropic
+export MODEL=gpt-5.4-mini        # or another supported model
+export MAX_TOKENS=2048
+```
+
 ### 3. Start the MCP server
-The client expects the MCP server to be running first.
+
+From the project root:
 
 ```bash
-cd src
-python mcp_server.py
+python src/mcp_server.py
 ```
 
-This starts the MCP HTTP endpoint on `http://127.0.0.1:8000/mcp` by default.
-
-### 4. Run the agent
-In a second terminal:
-
-```bash
-cd src
-python agent.py
-```
-
-If your server is running somewhere else, set:
+This serves the HTTP MCP endpoint on `http://127.0.0.1:8000/mcp` by default. You can override it with:
 
 ```bash
 export MCP_SERVER_URL=http://your-host:port/mcp
+export MCP_TRANSPORT=streamable-http
+export MCP_MOUNT_PATH=/mcp
+```
+
+### 4. Run the agent
+
+In a second terminal:
+
+```bash
+python src/agent.py
+```
+
+Useful flags:
+
+```bash
+python src/agent.py --raw
+python src/agent.py --provider anthropic
+python src/agent.py --debug
+```
+
+You can also enable raw JSON printing from the environment:
+
+```bash
+export SHOW_RAW_JSON=true
 ```
 
 ---
 
-## Commands
+## Built-in commands
 
 | Command | What it does |
 |---------|-------------|
-| `quit` | Exit |
-| `memory` | Show everything the agent has stored about you |
-| `clear` | Clear conversation history (memory stays) |
-| `reset` | Clear both history AND memory |
-| `help` | Show all commands |
+| `quit` / `exit` / `bye` | Exit the chat loop |
+| `memory` | Show the persistent memory store |
+| `history` | Show the recent chat history |
+| `clear` | Clear only the conversation history |
+| `reset` | Clear both history and memory |
+| `help` | Show the command reference |
 
-## Flags
+---
 
-| Flag | What it does |
-|------|-------------|
-| `--raw` | Also print the raw JSON from the LLM |
-| `--debug` | Print full tracebacks on errors |
+## Example prompts
+
+```text
+Find me biryani near me
+I'm vegetarian, what do you recommend?
+Show me the menu at Olive & Spice
+What have I ordered before?
+Place an order for pizza from the best option
+```
+
+As you chat, the app will show:
+- 🧠 memory updates extracted from your messages
+- 🔵🟡🟠🟢✨ the reasoning phases used by the agent
+- 🔧 each MCP tool call and its summarized result
 
 ---
 
 ## Architecture
+
+```text
+User input
+   ↓
+REPL (src/agent.py)
+   ↓
+LLM client (src/llm.py)
+   ↓
+Reasoning loop (src/reasoning.py)
+   ├─ memory injection
+   ├─ tool planning
+   └─ tool execution via MCP
+   ↓
+MCP server (src/mcp_server.py)
+   ↓
+Food-ordering tools + mock data
+```
 
 ```
 User message
@@ -110,38 +166,17 @@ running MCP server over `MCP_SERVER_URL`.
 
 ---
 
-## Try these prompts
+## Design notes
 
-```
-Find me biryani near me
-I'm vegetarian, what do you recommend?
-Show me the menu at Olive & Spice
-What have I ordered before?
-Order Pizza from the best place
-```
+1. Structured JSON output
+   The LLM returns JSON rather than free-form text so the reasoning loop can safely parse tool calls, memory updates, and the final reply.
 
-After each message, watch:
-- 🧠 **Memory panel** — new facts extracted from your message
-- 🔵🟡🟠🟢✨ **Reasoning phases** — the agent's internal monologue
-- 🔧 **Tool calls** — every MCP API call with exact inputs + results
+2. Persistent memory
+   Facts learned during the conversation are stored in `src/memory.json` and injected back into later prompts.
 
----
+3. MCP-first tool execution
+   The agent uses the MCP server as the canonical tool source, which makes tool behavior consistent and easy to inspect.
 
-## Key design patterns
+4. Provider switching
+   The app can use OpenAI or Anthropic by setting `LLM_PROVIDER` and the matching API key.
 
-### 1. Tool abstraction
-The agent calls `execute_tool(name, input)` through `mcp_client.py`, which hides the
-HTTP MCP transport details behind a simple adapter. This is the **adapter pattern**.
-
-### 2. Structured output
-The LLM always returns JSON (not plain text). This makes the output
-machine-readable so `reasoning.py` can parse and route each component.
-
-### 3. Memory injection
-Before every API call, the current memory is formatted as a string and
-injected into the system prompt. The LLM "knows" about the user without
-any special memory API.
-
-### 4. Reliable tool execution
-The agent uses the MCP server as its real tool source, so tool calls run through
-one consistent MCP interface. The server must be started before the agent begins.

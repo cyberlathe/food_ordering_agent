@@ -10,7 +10,9 @@ from typing import Any
 
 from openai import OpenAI
 
-from config import MAX_TOKENS, MODEL, OPENAI_API_KEY
+from anthropic import Anthropic
+
+from config import ANTHROPIC_API_KEY, LLM_PROVIDER, MAX_TOKENS, MODEL, OPENAI_API_KEY
 from mcp_server import list_available_tools
 
 
@@ -106,13 +108,25 @@ def _tool_prompt_block() -> str:
 
 class LLMClient:
     def __init__(self):
-        if not OPENAI_API_KEY:
-            raise ValueError(
-                "OPENAI_API_KEY is not set.\n"
-                "  export OPENAI_API_KEY=sk-...\n"
-                "  or set it in config.py"
-            )
-        self.client = OpenAI(api_key=OPENAI_API_KEY)
+        self.provider = (LLM_PROVIDER or "openai").lower()
+
+        if self.provider == "anthropic":
+            if not ANTHROPIC_API_KEY:
+                raise ValueError(
+                    "ANTHROPIC_API_KEY is not set.\n"
+                    "  export ANTHROPIC_API_KEY=sk-ant-...\n"
+                    "  or set it in config.py"
+                )
+            self.client = Anthropic(api_key=ANTHROPIC_API_KEY)
+        else:
+            if not OPENAI_API_KEY:
+                raise ValueError(
+                    "OPENAI_API_KEY is not set.\n"
+                    "  export OPENAI_API_KEY=sk-...\n"
+                    "  or set it in config.py"
+                )
+            self.client = OpenAI(api_key=OPENAI_API_KEY)
+
         self.history: list[dict[str, str]] = []
 
     def chat(self, user_message: str, memory_string: str) -> tuple[dict[str, Any], str]:
@@ -152,14 +166,22 @@ class LLMClient:
             *self.history,
         ]
 
-        response = self.client.chat.completions.create(
-            model=MODEL,
-            messages=messages,
-            max_completion_tokens=MAX_TOKENS,
-            response_format=AGENT_RESPONSE_SCHEMA,
-        )
-
-        raw = response.choices[0].message.content or ""
+        if self.provider == "anthropic":
+            response = self.client.messages.create(
+                model=MODEL,
+                max_tokens=MAX_TOKENS,
+                system=messages[0]["content"],
+                messages=messages[1:],
+            )
+            raw = "".join(block.text for block in response.content if getattr(block, "type", "") == "text")
+        else:
+            response = self.client.chat.completions.create(
+                model=MODEL,
+                messages=messages,
+                max_completion_tokens=MAX_TOKENS,
+                response_format=AGENT_RESPONSE_SCHEMA,
+            )
+            raw = response.choices[0].message.content or ""
         try:
             parsed = _normalize_response(_parse_single_json_object(raw))
         except (json.JSONDecodeError, ValueError):

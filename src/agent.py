@@ -27,8 +27,18 @@ sys.path.insert(0, os.path.dirname(__file__))
 import config as config
 
 # ── Parse CLI flags before imports that read config ───────────────────────────
+provider_override = None
+if "--provider" in sys.argv:
+    try:
+        provider_override = sys.argv[sys.argv.index("--provider") + 1].lower()
+    except (IndexError, ValueError):
+        provider_override = None
+
 if "--raw" in sys.argv:
     config.SHOW_RAW_JSON = True
+
+if provider_override in {"openai", "anthropic"}:
+    config.LLM_PROVIDER = provider_override
 
 import display as display
 from memory import Memory

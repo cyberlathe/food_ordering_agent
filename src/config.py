@@ -7,10 +7,12 @@ Edit OPENAI_API_KEY here, or set it in the environment.
 
 import os
 
-# ─── OpenAI ───────────────────────────────────────────────────────────────────
+# ─── LLM provider ─────────────────────────────────────────────────────────────
+LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "openai").lower()
 OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-MODEL: str = "gpt-5.4-mini"
-MAX_TOKENS: int = 2048
+ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
+MODEL: str = os.getenv("MODEL", "gpt-5.4-mini")
+MAX_TOKENS: int = int(os.getenv("MAX_TOKENS", "2048"))
 
 # ─── Memory ───────────────────────────────────────────────────────────────────
 MEMORY_FILE: str = os.path.join(os.path.dirname(__file__), "memory.json")
