@@ -70,6 +70,7 @@ _MOCK_MENU = {
         {"name": "Chicken Alfredo", "price": 340, "rating": 4.5},
         {"name": "Caprese Salad", "price": 210, "rating": 4.4},
         {"name": "Tiramisu", "price": 180, "rating": 4.8},
+        {"name": "Diet Coke", "price": 150, "rating": 4.5},
     ],
     1002: [
         {"name": "Salmon Nigiri", "price": 340, "rating": 4.8},
@@ -101,13 +102,16 @@ _MOCK_MENU = {
     ],
 }
 
-_DEFAULT_DELIVERY_ADDRESS = "123 Broadway, New York, NY 10001"
-
 _MOCK_ADDRESSES = [
     {
         "id": "addr_001",
         "label": "Home",
-        "address": _DEFAULT_DELIVERY_ADDRESS,
+        "address": "123 Broadway, New York, NY 10001",
+    },
+    {
+        "id": "addr_002",
+        "label": "Office",
+        "address": "456 Park Ave, New York, NY 10022",
     }
 ]
 
@@ -239,14 +243,14 @@ def create_cart() -> dict:
     }
 
 
-@mcp.tool(description="Place the current order and optionally provide a delivery address.")
+@mcp.tool(description="Checkout the cart for the current order session.")
 def checkout_cart(address: str | None = None) -> dict:
-    """Place the current order and optionally provide a delivery address."""
+    """Checkout the cart for the current order session."""
     return {
         "order_id": "ORD-" + str(random.randint(1000, 9999)),
         "status": "placed",
         "estimated_delivery": "35-45 minutes",
-        "delivery_address": str(address or _DEFAULT_DELIVERY_ADDRESS),
+        "delivery_address": str(address or "Mock Address"),
     }
 
 
