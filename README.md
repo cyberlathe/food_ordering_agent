@@ -104,11 +104,11 @@ export SHOW_RAW_JSON=true
 ## Example prompts
 
 ```text
-Find me biryani near me
-I'm vegetarian, what do you recommend?
-Show me the menu at Olive & Spice
+Find restaurants serving Italian or pizza
+Show vegetarian menu items at Taco Fiesta
+What are the top dishes at Olive & Spice?
+Browse the menu at Sakura House and suggest something vegetarian
 What have I ordered before?
-Place an order for pizza from the best option
 ```
 
 As you chat, the app will show:
