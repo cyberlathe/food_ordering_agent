@@ -16,7 +16,7 @@ from config import SHOW_RAW_JSON
 from mcp_client import execute_tool
 from memory import Memory
 
-MAX_TOOL_ROUNDS = 3
+MAX_TOOL_ROUNDS = 5
 
 
 def run_turn(
