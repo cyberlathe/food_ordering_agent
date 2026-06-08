@@ -27,6 +27,14 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 HTML_FILE = PROJECT_ROOT / "food_ordering_agent.html"
 MAX_TOOL_ROUNDS = 3
 
+# Initialise components
+memory = Memory()
+
+try:
+    llm = LLMClient()
+except ValueError as e:
+    print(f"[demo-backend] Error initializing LLM client: {e}")
+    sys.exit(1)
 
 class DemoBackendHandler(BaseHTTPRequestHandler):
     server_version = "FoodOrderingDemo/1.0"
@@ -53,7 +61,7 @@ class DemoBackendHandler(BaseHTTPRequestHandler):
             if not message:
                 raise ValueError("message is required")
 
-            response = run_turn(message)
+            response = run_turn(message, llm, memory)
             self._send_json(200, response)
         except Exception as exc:  # noqa: BLE001
             self._send_json(500, {"error": str(exc)})
@@ -95,10 +103,8 @@ class DemoBackendHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
 
-def run_turn(user_message: str) -> dict[str, Any]:
+def run_turn(user_message: str, llm: LLMClient, memory: Memory) -> dict[str, Any]:
     """Run one full turn using the real MCP + LLM flow and return structured JSON."""
-    memory = Memory()
-    llm = LLMClient()
 
     parsed, _raw = llm.chat(user_message, memory.to_prompt_string())
     all_memory_updates = list(parsed.get("memory_updates", []))

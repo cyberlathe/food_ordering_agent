@@ -132,7 +132,6 @@
     font-size: 11px; line-height: 1.6; border: 0.5px solid;
     position: relative; overflow: visible;
     width: 100%;
-    min-height: 52px;
   }
   .step-think  { background: var(--blue-bg);   color: var(--blue-text);  border-color: var(--blue); }
   .step-plan   { background: var(--purple-bg);  color: var(--purple-text);border-color: var(--purple); }
@@ -157,6 +156,7 @@
     border-radius: 8px; border: 0.5px solid var(--border2);
     background: var(--bg2); overflow: hidden;
     font-size: 11px;
+    min-height: 52px;
   }
   .tool-call-header {
     padding: 5px 8px; display: flex; align-items: center; gap: 6px;
@@ -415,9 +415,8 @@ function addReasoningSteps(steps) {
   const empty = document.getElementById('reasoning-empty');
   if (empty) empty.remove();
   const panel = document.getElementById('reasoning-panel');
-  // Add a divider
   const div = document.createElement('div');
-  div.style.cssText = 'height:0.5px;background:var(--border);margin:2px 0;';
+  div.style.cssText = 'height:1px;background:var(--border);margin:2px 0;';
   panel.appendChild(div);
   steps.forEach((s, i) => {
     const el = document.createElement('div');
@@ -429,23 +428,34 @@ function addReasoningSteps(steps) {
   panel.scrollTop = panel.scrollHeight;
 }
 
-function addToolCall(tc) {
+function addToolCall(toolCalls) {
+  const empty = document.getElementById('reasoning-empty');
+  if (empty) empty.remove();
+
   const panel = document.getElementById('reasoning-panel');
-  const el = document.createElement('div');
-  el.className = 'tool-call fadein';
-  const inputStr = JSON.stringify(tc.input || {}, null, 1);
-  el.innerHTML = `
-    <div class="tool-call-header" onclick="this.nextElementSibling.classList.toggle('open')">
-      <i class="ti ti-api" aria-hidden="true" style="font-size:13px;color:var(--amber);"></i>
-      <span class="tool-name">${escHtml(tc.tool)}</span>
-      <span class="tool-status done">done</span>
-    </div>
-    <div class="tool-call-body">
-      <div class="tool-section-label">input</div>
-      <div class="tool-json">${escHtml(inputStr)}</div>
-      <div class="tool-result"><b>Result:</b> ${escHtml(tc.result_summary || '—')}</div>
-    </div>`;
-  panel.appendChild(el);
+  const divider = document.createElement('div');
+  divider.style.cssText = 'height:1px;background:var(--border);margin:2px 0;';
+  panel.appendChild(divider);
+
+  const calls = Array.isArray(toolCalls) ? toolCalls : [toolCalls];
+
+  calls.forEach((t, i) => {
+    const toolName = String(t?.tool || t?.name || 'tool_call');
+    const inputStr = JSON.stringify(t?.input || t?.arguments || {}, null, 1);
+    const resultText = String(t?.summary || t?.result_summary || t?.result || t?.output || '—');
+
+    const el = document.createElement('div');
+    el.className = 'reasoning-step step-act fadein';
+    el.style.animationDelay = (i * 60) + 'ms';
+    el.innerHTML = `
+      <div class="step-label">tool call</div>
+      <div style="font-weight:600; margin-bottom:4px;">${escHtml(toolName)}</div>
+      <div class="step-text"><b>Input:</b> ${escHtml(inputStr)}</div>
+      <div class="step-text" style="margin-top:4px;"><b>Result:</b> ${escHtml(resultText)}</div>`;
+
+    panel.appendChild(el);
+  });
+
   panel.scrollTop = panel.scrollHeight;
 }
 
@@ -498,7 +508,7 @@ async function callAgent(userMsg) {
   const parsed = {
     reasoning: data.reasoning || [],
     memory_updates: data.memory_updates || [],
-    tool_calls: data.tool_calls || [],
+    tool_calls: Array.isArray(data.tool_calls) ? data.tool_calls : (Array.isArray(data.tool_results) ? data.tool_results : []),
     reply: data.reply || 'Sorry, I had trouble processing that.'
   };
 
@@ -525,13 +535,16 @@ async function handleSend() {
     // Update memory
     (result.memory_updates || []).forEach(m => addMemoryItem(m.key, m.value));
 
+    console.log('Agent reasoning result:', result);
     // Add reasoning steps
     if (result.reasoning && result.reasoning.length) {
       addReasoningSteps(result.reasoning);
     }
 
     // Add tool calls
-    (result.tool_calls || []).forEach(tc => addToolCall(tc));
+    if (result.tool_calls && result.tool_calls.length) {
+      addToolCall(result.tool_calls);
+    }
 
     // Add reply
     addChatMsg('agent', result.reply || '(no reply)');
