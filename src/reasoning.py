@@ -13,7 +13,7 @@ from typing import Any
 
 import display as display
 from config import SHOW_RAW_JSON
-from mcp_client import execute_tool
+import mcp_client
 from memory import Memory
 
 MAX_TOOL_ROUNDS = 5
@@ -24,8 +24,9 @@ def run_turn(
     llm_client,
     memory: Memory,
 ) -> str:
-    """Run one full reasoning loop turn and return the final reply."""
     memory_string = memory.to_prompt_string()
+
+    #1. Ask the LLM what to do with the current memory and user message
     parsed, _raw = llm_client.chat(user_message, memory_string)
 
     if SHOW_RAW_JSON:
@@ -35,6 +36,9 @@ def run_turn(
     all_memory_updates: list[dict[str, Any]] = []
     executed_calls: set[str] = set()
 
+
+    #2. Check what the model wants to do - if it wants to call a tool, 
+    # execute it and feed the results back in a new turn. Repeat until it stops asking for more tools.
     for _round in range(MAX_TOOL_ROUNDS):
         all_memory_updates.extend(parsed.get("memory_updates", []))
         requested_tool_calls = parsed.get("tool_calls", [])
@@ -51,7 +55,10 @@ def run_turn(
                 continue
             break
 
+        #3. Execute the requested tools and get results
         round_results = _execute_tool_calls(tool_calls, executed_calls)
+
+        #4. Feed tool results and memory back to the LLM and ask what to do next
         parsed, _raw = llm_client.observe_tools(round_results, memory.to_prompt_string())
 
         if SHOW_RAW_JSON:
@@ -109,16 +116,17 @@ def _execute_tool_calls(
         signature = _tool_signature(tool_name, tool_input)
         executed_calls.add(signature)
 
-        result_json = execute_tool(
-            name=tool_name,
-            input_data=tool_input,
-        )
+    #Call the tool via MCP and get the result
+    result_json = mcp_client.execute_tool(
+        name=tool_name,
+        input_data=tool_input,
+    )
 
-        try:
-            result_data = json.loads(result_json.split("\n[fallback")[0])
-            result_summary = _summarize_result(tool_name, result_data)
-        except Exception:
-            result_summary = result_json[:200]
+    try:
+        result_data = json.loads(result_json.split("\n[fallback")[0])
+        result_summary = _summarize_result(tool_name, result_data)
+    except Exception:
+        result_summary = result_json[:200]
 
         display.print_tool_call(
             tool=tool_name,

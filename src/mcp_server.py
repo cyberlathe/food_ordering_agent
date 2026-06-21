@@ -242,6 +242,14 @@ def create_cart() -> dict:
         "status": "created",
     }
 
+@mcp.tool(description="Add items to the current order session.")
+def add_items_to_cart(items: list[dict]) -> dict:
+    """Add items to the current order session."""
+    return {
+        "items": items,
+        "status": "added",
+    }
+
 
 @mcp.tool(description="Checkout the cart for the current order session.")
 def checkout_cart(address: str | None = None) -> dict:
